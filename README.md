@@ -6,7 +6,6 @@ This is the refactored version of the pScan with Java on the Neo4j.
 
 ## Content
 - [Deployment](#deployment)
-	- [Dependencies](#dependencies)
 - [Usage](#usage)
   - [Input](#input)
   - [Output](#output)
@@ -14,7 +13,6 @@ This is the refactored version of the pScan with Java on the Neo4j.
 
 # Deployment
 
-## Dependencies
 The program depends on the graph database Neo4j. *[Here is the link for Neo4j on the github](https://github.com/neo4j/neo4j)*
 
 
