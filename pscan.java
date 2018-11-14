@@ -35,7 +35,7 @@ import java.lang.Math;
 
 public class pscan {
 
-	static String file = "/Users/xiaohai/Documents/study/class/2018fall/729/assignment5/src/data.txt";
+
 	static String graphDatabase = "pscan_data";
 	GraphDatabaseService model;
 	BatchInserter myInsert;
@@ -45,22 +45,21 @@ public class pscan {
 	int[] similarDegree;//number of adjacent edges with similarity no less than epsilon
 	int[] effectiveDegree;//number of adjacent edges not pruned by similarity
 	
-	float eps = 0.6f;
+	float eps = (float) (2.0f/Math.sqrt(15));
 	int miu = 4;
-	
-//	int[] pa;
-//	int[] rank;	//pa and rank use for disjoint-set data structure
-	
-//	int[] cid;// cluster id
-	
-//	int[] min_cn;	//minimum common neighbor: -2 means not similar; -1 means similar; 0 means not sure; > 0 means the minimum common neighbor
-	
+		
 	boolean[] explored;
 	ArrayList<saveNode> dis_joint;
-	HashMap<String,Float> similars;
+	HashMap<String,Boolean> similars;
+	ArrayList<saveNode> clusters;
+	saveNode[] finalClusters;
 	
 	
-	public pscan(String file) throws IOException {
+	public pscan(String file,float eps, int miu) throws IOException {
+		
+		
+		this.eps = eps;
+		this.miu = miu;
 		try {
 			FileUtils.deleteRecursively( new File(graphDatabase));
 		} catch (IOException e) {
@@ -96,19 +95,28 @@ public class pscan {
 		
 	}
 	
-	public static void main(String[] args) throws IOException {
-		
-		pscan test = new pscan(file);
-		test.pSCAN();
-//		System.out.println(test.dis_joint);
-		for(saveNode node : test.dis_joint) {
-			while(node != null) {
-				System.out.print(node.val);
-				node = node.next;
-			}
-			System.out.println(" ");
-		}
-	}
+//	public static void main(String[] args) throws IOException {
+//		
+//		pscan test = new pscan(file);
+//		test.pSCAN();
+////		System.out.println(test.dis_joint);
+////		for(saveNode node : test.dis_joint) {
+////			while(node != null) {
+////				System.out.print(node.val);
+////				node = node.next;
+////			}
+////			System.out.println(" ");
+////		}
+//		System.out.println(test.clusters);
+//		for(int i = 0; i < test.finalClusters.length;i++) {
+//			saveNode cluster = test.finalClusters[i];
+//			while(cluster != null) {
+//				System.out.print(cluster.val + " ");
+//				cluster = cluster.next;
+//			}
+//		System.out.println(" ");
+//		}
+//	}
 	
 	
 	private void registerShutdownHook(GraphDatabaseService graphDb) {
@@ -171,7 +179,7 @@ public class pscan {
             return totalNumber;
     }
 	
-	public void pSCAN() {
+	public saveNode[] pSCAN() {
 		// initial similarDegree and effectiveDegree
 		
 		similarDegree = new int[nodeNumber];
@@ -204,14 +212,70 @@ public class pscan {
 				clusterCore(u);
 			}
 		}
-		
+		clusterNonCore();
 	
-		
+		return finalClusters;
 	}
 	
 	
 	
 	public void clusterNonCore() {
+		// get the clusters and non-core
+		HashSet<Integer> nonCores = new HashSet<>();
+		clusters = new ArrayList<>();
+		for(int i = 0; i < dis_joint.size();i++) {
+			saveNode node = dis_joint.get(i);
+			saveNode cur = node;
+			//make sure the node is a cluster or a non core vertex
+			int length = 0;
+			while(cur != null) {
+				cur = cur.next;
+				length++;
+			}
+			//save the non core
+			if(length == 1) {
+				nonCores.add(node.val);
+				//save the cluster
+			}else if(length > 1) {
+				
+//				HashSet<Integer> cluster = new HashSet<>();
+//				while(node != null) {
+//					cluster.add(node.val);
+//					node = node.next;
+//				}
+				clusters.add(node);
+			}
+		}
+		// translate clusters from arraylist to array
+		finalClusters = clusters.toArray(new saveNode[clusters.size()]);
+		
+		// now we have the cluster and non core 
+		// just iterate each v belong to non core of each u in the cluster
+		
+		for(int i = 0; i < finalClusters.length;i++) {
+			//get one cluster
+			saveNode cluster = finalClusters[i];
+			//iterate this cluster
+//			cluster.iterator();
+			
+			while(cluster != null) {
+				int u = cluster.val;
+				ArrayList<Integer> neighbors = getNeighbors(u);
+				for(Integer v: neighbors) {
+					if (nonCores.contains(v)) {
+						boolean isSimilar = checkStructureSimilar(u,v);
+						if(isSimilar) {
+							saveNode nonCore = new saveNode(v);
+							nonCore.next = finalClusters[i];
+							finalClusters[i] = nonCore;
+						}
+					}
+				}
+				cluster = cluster.next;
+			}
+			
+
+		}
 		
 	}
 	
@@ -224,10 +288,20 @@ public class pscan {
 //			neighbors.add(u);
 			System.out.println(u + ":" +neighbors);
 			for(Integer v:neighbors) {
-				float similar = compute(u,v);
-				System.out.println(u + "-" + v + ":" + similar);
-				similars.put(u + " " + v, similar);
-				if(similar >= eps) {
+				//set a flag about similar
+				Boolean isSimilar = false;
+				if (similars.containsKey(u + " " + v)) {
+					isSimilar = similars.get(u + " " + v);
+				}else {
+					isSimilar = checkStructureSimilar(u,v);
+					similars.put(u + " " + v, isSimilar);
+					similars.put(v + " " + u, isSimilar);
+				}
+				
+//				float similar = compute(u,v);
+//				System.out.println(u + "-" + v + ":" + similar);
+				
+				if(isSimilar) {
 					similarDegree[u]++;	
 					System.out.println(similarDegree[u]);
 				}else {
@@ -236,7 +310,7 @@ public class pscan {
 				
 				//line 7
 				if(!explored[v] && v != u) {
-					if(similar >= eps) {
+					if(isSimilar) {
 						similarDegree[v]++;
 					}else {
 						effectiveDegree[v]--;
@@ -279,7 +353,7 @@ public class pscan {
 		System.out.println(u + "+++++++++" + neighborU_Caled);
 		
 		for(Integer v : neighborU_Caled) {
-			if(similarDegree[v] >= miu && similars.get(u + " " + v) >= eps) {
+			if(similarDegree[v] >= miu && similars.get(u + " " + v) ) {
 				System.out.println("Union:" + u + " "+ v);
 				union(u,v);
 			}	
@@ -288,16 +362,18 @@ public class pscan {
 		neighborU.removeAll(neighborU_Caled);
 		for(Integer v:neighborU) {
 			if(find(u) != find(v) && effectiveDegree[u] > miu) {
-				float similar = compute(u,v);
-				similars.put(u + " " + v, similar);
+				Boolean isSimilar = checkStructureSimilar(u,v);
+//				float similar = compute(u,v);
+				similars.put(u + " " + v, isSimilar);
+				similars.put(v + " " + u, isSimilar);
 				if (!explored[v] ) {
-					if (similar >= eps) {
+					if (isSimilar) {
 						similarDegree[v]++;
 					}else {
 						effectiveDegree[u]--;
 					}
 				}
-				if (similarDegree[v] >= miu && similar > eps) {
+				if (similarDegree[v] >= miu && isSimilar) {
 					union(u,v);
 				}
 			}
@@ -345,8 +421,6 @@ public class pscan {
 			
 			ArrayList<Integer> neighborV = getNeighbors(v);
 			
-//			neighborU.add(u);
-//			neighborV.add(v);
 			
 			// turn two array to set
 			Set<Integer> setU = new HashSet<>(neighborU);
@@ -381,63 +455,58 @@ public class pscan {
 	
 	
 	public void PruneAndCrossLink() {
-		try (Transaction tx = model.beginTx()) {
-			for(int i = 0; i < nodeNumber; i++) {
-//				long id = Long.valueOf(i);
-				//find the node
-				Node node = model.getNodeById(Long.valueOf(i));
-				//create an array to save the neighbors
-				ArrayList<Integer> neighbors = new ArrayList<>();
-				//get all relationships
-				Iterable<Relationship> it = node.getRelationships(Direction.INCOMING);
-				for(Relationship re: it) {
-					neighbors.add((int)re.getOtherNode(node).getId());
+		//for each node
+		for(int u = 0; u < nodeNumber;u++) {
+			HashSet<Integer> neighborU = new HashSet<>(getNeighbors(u));
+			for(Integer v:neighborU) {
+				float eps_2 = eps * eps;
+				if(degree[u] < eps_2 * degree[v] || degree[v] < eps_2 * degree[u] ) {
+					similars.put(u + " " + v, false);
+					effectiveDegree[u]--;
 				}
-				Collections.sort(neighbors);	
-//				System.out.println(profiles);
-//				String[]  a= profiles.toArray(new String[profiles.size()]);
-//				int[] cur_neighbors = neighbors.toArray();
-				
-				for(int j = 0; j < neighbors.size();j++) {
-					
-					int v = neighbors.get(j);
-//					if (v < i) {
-//						if (min_cn[v] == 0) min_cn[j] = -2;
-//						continue;// already checked
-//					}
-					int a = degree[i];
-					int b = degree[v];
-					
-//					if(a > b) {
-//						int temp = a;
-//						a = b;
-//						b = temp;
-//					}
-					if (a < eps * eps * b || b < eps* eps *  a) {
-						
-					}
-					
-					
+				else {
+					//cross link
 				}
-				
 			}
 		}
 
 	}
 	
-	
-	
-	
-	
-}
-class saveNode{
-	public int val;
-	public saveNode next;
-	
-	public saveNode(int val) {
-		this.val = val;
-		this.next = null;
+	public boolean checkStructureSimilar(int u,int v){
+		// get neighbors of u and v
+		ArrayList<Integer> neighborU = getNeighbors(u);
+		Collections.sort(neighborU);
+		ArrayList<Integer> neighborV = getNeighbors(v);
+		Collections.sort(neighborV);
+		
+		
+		int min_cn = (int) Math.ceil(eps * Math.sqrt(degree[u] * degree[v]));
+		int cn = 0, i = 0,j = 0;
+		int du = degree[u],dv = degree[v];
+		while ( cn < min_cn  && min_cn <= Math.min(du, dv) && i < degree[u] && j < degree[v]) {
+			
+			int nu = neighborU.get(i);
+			int nv = neighborV.get(j);
+			if (nu < nv) {
+				du--;
+				i++;
+			}else if(nu > nv) {
+				dv--;
+				j++;
+			}else {
+				cn++;
+				i++;
+				j++;
+			}
+			
+		}
+		if (cn < min_cn) return false;
+		
+		return true;
+		
+		
 	}
+
 }
 
 
