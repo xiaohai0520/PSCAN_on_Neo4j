@@ -1,4 +1,4 @@
-# pSCAN - Fast and Exact Structural Graph Clustering (with overlaps on Neo4j)
+# pSCAN - Fast and Exact Structural Graph Clustering (with overlaps in Java on Neo4j)
 
 The paper: *["pSCAN: Fast and Exact Structural Graph Clustering"](https://www.cse.unsw.edu.au/~ljchang/pdf/icde16-pscan.pdf) by Lijun Chang, Wei Li, Xuemin Lin,Lu Qin and Wenjie Zhang, ICDE'16*.
 
