@@ -42,11 +42,11 @@ public class pscan {
 	HashMap<Integer,Integer> degree;
 	HashMap<Integer,Integer> similarDegree;//number of adjacent edges with similarity no less than epsilon
 	HashMap<Integer,Integer> effectiveDegree;//number of adjacent edges not pruned by similarity
-	
+//	
 	float eps = 0.8f;
 //	float eps = (float) (2.0f/Math.sqrt(15));
 	int miu = 4;
-		
+	
 	HashSet<Integer> explored;
 	ArrayList<saveNode> dis_joint;
 	HashMap<String,Boolean> similars;
@@ -54,7 +54,8 @@ public class pscan {
 	saveNode[] finalClusters;
 	
 	// use for save all nodes
-	HashSet<Integer> allNodes = new HashSet<>();
+	HashSet<Integer> allNodes;
+	
 	public pscan(String file,String database,float eps, int miu) throws IOException {
 		
 		
@@ -65,6 +66,7 @@ public class pscan {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		allNodes = new HashSet<>();
 		
 		List<String> datas = readData(file);
 		nodeNumber = createDatabase(datas,database);
@@ -89,32 +91,8 @@ public class pscan {
 		
 		similars = new HashMap<>();
 		
-		
-		
 	}
 	
-//	public static void main(String[] args) throws IOException {
-//		
-//		pscan test = new pscan(file);
-//		test.pSCAN();
-////		System.out.println(test.dis_joint);
-////		for(saveNode node : test.dis_joint) {
-////			while(node != null) {
-////				System.out.print(node.val);
-////				node = node.next;
-////			}
-////			System.out.println(" ");
-////		}
-//		System.out.println(test.clusters);
-//		for(int i = 0; i < test.finalClusters.length;i++) {
-//			saveNode cluster = test.finalClusters[i];
-//			while(cluster != null) {
-//				System.out.print(cluster.val + " ");
-//				cluster = cluster.next;
-//			}
-//		System.out.println(" ");
-//		}
-//	}
 	
 	
 	private void registerShutdownHook(GraphDatabaseService graphDb) {
@@ -177,8 +155,7 @@ public class pscan {
 			int ID1 = Integer.parseInt(rela[0]);
 			int ID2 = Integer.parseInt(rela[1]);
 			
-//			long ID1 = Long.parseLong(rela[0]);
-//            long ID2 = Long.parseLong(rela[1]);
+//			make sure whether have been created
             if(!allNodes.contains(ID1)) {
             		myInsert.createNode(Long.parseLong(rela[0]), null, Label.label("NODE"));
             		allNodes.add(ID1);
@@ -196,6 +173,7 @@ public class pscan {
 			
 		}		
             myInsert.shutdown();
+            System.out.println(allNodes.size());
            // System.out.println("Create database successfully");
             return allNodes.size();
     }
@@ -211,30 +189,23 @@ public class pscan {
 //			each node
 			for(Integer id: allNodes) {
 				Node node = model.getNodeById(Long.valueOf(id));
-				int count = 0;
+				
 				Iterable<Relationship> it = node.getRelationships(Direction.BOTH);
+				
+				HashSet<Long> cur = new HashSet<Long>();
+				Long l_id = Long.valueOf(id);
 				for(Relationship re: it) {
-					count++;
+					cur.add(re.getOtherNodeId(l_id));
 				}
 				
-				effectiveDegree.put(id, count+1);
-				degree.put(id, count+1);
+				cur.add(l_id);
+				
+				effectiveDegree.put(id, cur.size());
+//				System.out.println(l_id + ":" + cur.size());
+				degree.put(id, cur.size());
 				similarDegree.put(id, 0);
 			}
-//			
-//			
-//			for(int i = 0; i < nodeNumber; i++) {
-//				Node node = model.getNodeById(Long.valueOf(i));
-//				int count = 0;
-//				Iterable<Relationship> it = node.getRelationships(Direction.BOTH);
-//				for(Relationship re: it) {
-//					count++;
-//				}
-//				
-//				System.out.println(count + 1);
-//				effectiveDegree[i] = count + 1;
-//				degree[i] = count + 1;
-//			}
+
 			tx.success();
 		}
 		
@@ -243,38 +214,13 @@ public class pscan {
 	
 	
 	public saveNode[] pSCAN() {
-		// initial similarDegree and effectiveDegree
+		// initial similarDegree and effectiveDegree and degree
+		
 		initStatus();
-//		similarDegree = new HashMap<Integer,Integer>();
-//		effectiveDegree = new HashMap<Integer,Integer>();
-//		degree = new HashMap<Integer,Integer>();
-		// set sd = 0
-//		for(Long id:allNodes) {
-//			
-//		}
-//		for(int i = 0; i < nodeNumber; i++) {
-//			
-//			similarDegree[i] = 0;
-//		}
-		// set ed to full
-//		try (Transaction tx = model.beginTx()) {
-//			
-//			for(int i = 0; i < nodeNumber; i++) {
-//				Node node = model.getNodeById(Long.valueOf(i));
-//				int count = 0;
-//				Iterable<Relationship> it = node.getRelationships(Direction.BOTH);
-//				for(Relationship re: it) {
-//					count++;
-//				}
-//				
-//				System.out.println(count + 1);
-//				effectiveDegree[i] = count + 1;
-//				degree[i] = count + 1;
-//			}
-//			tx.success();
-//		}
+
 		// line 5
 		for(int u: allNodes) {
+			// check core vertex for u
 			checkCore(u);
 			
 			if(similarDegree.get(u) >= miu) {
@@ -286,15 +232,6 @@ public class pscan {
 		clusterNonCore();
 		return finalClusters;
 		
-		
-//		for(int u = 0; u < nodeNumber; u++) {
-//			checkCore(u);
-//			// if it is a core vertez
-//			if(similarDegree[u] >= miu) {
-//				
-//			}
-//		}
-//		clusterNonCore();
 	
 		
 	}
@@ -353,7 +290,7 @@ public class pscan {
 				saveNode cluster = finalClusters[i];
 				while(cluster != null) {
 					int u = cluster.val;
-					ArrayList<Integer> neighbors = getNeighbors(u);
+					HashSet<Integer> neighbors = getNeighbors(u);
 					HashSet<Integer> neis = new HashSet<Integer>(neighbors);
 					if(neis.contains(non_core)) {
 						boolean isSimilar = checkStructureSimilar(u,non_core);
@@ -412,7 +349,7 @@ public class pscan {
 			similarDegree.put(u, 0);
 //			similarDegree[u] = 0;
 			//get the neighbors include itself
-			ArrayList<Integer> neighbors = getNeighbors(u);
+			HashSet<Integer> neighbors = getNeighbors(u);
 //			System.out.println(u + ":" +neighbors);
 			for(Integer v:neighbors) {
 				//set a flag about similar
@@ -427,21 +364,18 @@ public class pscan {
 							
 				if(isSimilar) {
 					similarDegree.put(u,similarDegree.get(u)+1);
-//					similarDegree[u]++;	
-//					System.out.println(similarDegree[u]);
 				}else {
 					effectiveDegree.put(u,effectiveDegree.get(u)-1);
-//					effectiveDegree[u]--;
 				}
 				
 				//line 7
 				if(!explored.contains(v) && v != u) {
 					if(isSimilar) {
 						similarDegree.put(v,similarDegree.get(v)+1);
-//						similarDegree[v]++;
+
 					}else {
 						effectiveDegree.put(v,effectiveDegree.get(v)-1);
-//						effectiveDegree[v]--;
+
 					}
 				}
 				// already to prove u whether is a core 
@@ -452,7 +386,7 @@ public class pscan {
 		}
 //		System.out.println("---------" + effectiveDegree[u] + ":" + similarDegree[u]);
 		//mark already explore u
-//		explored[u] = true;
+
 		explored.add(u);
 	}
 	
@@ -460,7 +394,7 @@ public class pscan {
 		//line 1 get N[u]`
 		HashSet<Integer> neighborU_Caled = new HashSet<>();
 		//get neighbors of u		
-		HashSet<Integer> neighborU = new HashSet<>(getNeighbors(u));
+		HashSet<Integer> neighborU = getNeighbors(u);
 		neighborU.remove(u);
 
 		// need to remove u itself
@@ -542,9 +476,9 @@ public class pscan {
 	public float compute(int u, int v) {
 		float res = 0.0f;
 		try (Transaction tx = model.beginTx()) {
-			ArrayList<Integer> neighborU = getNeighbors(u);
+			HashSet<Integer> neighborU = getNeighbors(u);
 			
-			ArrayList<Integer> neighborV = getNeighbors(v);
+			HashSet<Integer> neighborV = getNeighbors(v);
 			
 			
 			// turn two array to set
@@ -564,13 +498,16 @@ public class pscan {
 	
 	
 	//get the neighbor of one vertex
-	public ArrayList<Integer> getNeighbors(int u){
-		ArrayList<Integer> neighbors = new ArrayList<>();
+	public HashSet<Integer> getNeighbors(int u){
+		
+		HashSet<Integer> neighbors = new HashSet<>();
+		
 		try (Transaction tx = model.beginTx()) {
+			Long l_id = Long.valueOf(u);
 			Node node = model.getNodeById(Long.valueOf(u));
 			Iterable<Relationship> it = node.getRelationships(Direction.BOTH);
 			for(Relationship re: it) {
-				neighbors.add((int)re.getOtherNode(node).getId());
+				neighbors.add((int)re.getOtherNodeId(l_id));
 			}
 			tx.success();
 		}
