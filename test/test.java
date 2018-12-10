@@ -17,6 +17,7 @@ public class test {
 	
 	static Map<Integer,Set<Integer>> clusters = new TreeMap<>();
 	
+	
 	public List<String> readanswer(String fileName) throws IOException {
 		String fileAllName = fileName;
 		File file = new File(fileAllName); 
