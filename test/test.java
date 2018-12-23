@@ -13,7 +13,7 @@ import java.util.TreeSet;
 
 public class test {
 	
-	static String answer_file = "/Users/xiaohai/Documents/study/class/2018fall/729/assignment5/src/email-cluster.txt";
+	static String answer_file = "email-cluster.txt";
 	
 	static Map<Integer,Set<Integer>> clusters = new TreeMap<>();
 	
