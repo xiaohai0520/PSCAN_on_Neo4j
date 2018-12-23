@@ -1,4 +1,4 @@
-# pSCAN - Fast and Exact Structural Graph Clustering (with overlaps in Java on Neo4j)
+# pSCAN - Fast and Exact Structural Graph Clustering (Java on Neo4j)
 
 The paper: *["pSCAN: Fast and Exact Structural Graph Clustering"](https://www.cse.unsw.edu.au/~ljchang/pdf/icde16-pscan.pdf) by Lijun Chang, Wei Li, Xuemin Lin,Lu Qin and Wenjie Zhang, ICDE'16*.
 
@@ -9,7 +9,10 @@ This is the refactored version of the pScan with Java on the Neo4j.
 - [Usage](#usage)
   - [Input](#input)
   - [Output](#output)
-- [Reference Projects](#related-projects)
+- [Anaylsis](#analysis)
+  - [Influence](#influence)
+  - [Optimization](#optimization)
+- [Reference](#reference)
 
 # Deployment
 
@@ -33,7 +36,7 @@ input_network  - the input graph specified as a file in the TXT type.
 ```
 For example
 ```
-$java RUN_PSCAN ./data/data.txt ./model 0.5 4
+$java RUN_PSCAN ./data/data.txt ./model 0.51 4
 
 ```
 
@@ -53,10 +56,43 @@ The undirected unweighted input network to be clustered is specified in the TXT 
 ## Output
 The CNL (clusters nodes list) output is a standard format. For example:
 ```
-# Clusters: 2, Nodes: 9
-0
-1 3 2 4
-```  
-# Reference Projects
+eps: 0.51  miu:4
+
+All nodes:
+[0,1,2,3,4,5,6,7,8,9]
+
+Core clusters:
+[0,1,2,3],[5,6,7,8]
+
+non cores:
+[4,9]
+
+All clusters:
+No1: [0,1,2,3,4]
+No2: [4,5,6,7,8,9]
+
+``` 
+<img width="400" height="200" src=https://github.com/xiaohai0520/PSCAN_on_Neo4j/blob/master/image/Picture1.png/>
+
+# Analysis
+
+## Influence
+We do the test for running time on different parameters to test the influence for parameters.
+<img width="400" height="200" src=https://github.com/xiaohai0520/PSCAN_on_Neo4j/blob/master/image/influence.jpg/>
+
+## Optimization
+We implement three optimizations in the pSCAN.
+
+### cross link
+- Cut half of the calculate times in process of checking core.
+### Pruning rule 
+- Find out which vertex pairs are not structure similar before checking.
+### Adaptive structure-similar checking 
+- Compute the minimum number of common neighbors, terminate early if any vertex can match the minimum condition.
+
+<img width="400" height="200" src=https://github.com/xiaohai0520/PSCAN_on_Neo4j/blob/master/image/op.jpg/>
+
+
+# Reference
 - [pSCAN](https://github.com/LijunChang/pSCAN) - pSCAN: Fast and Exact Structural Graph Clustering.
 
