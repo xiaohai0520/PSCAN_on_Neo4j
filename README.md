@@ -1,8 +1,6 @@
 # pSCAN - Fast and Exact Structural Graph Clustering (Java on Neo4j)
 
-The paper: *["pSCAN: Fast and Exact Structural Graph Clustering"](https://www.cse.unsw.edu.au/~ljchang/pdf/icde16-pscan.pdf) by Lijun Chang, Wei Li, Xuemin Lin,Lu Qin and Wenjie Zhang, ICDE'16*.
-
-This is the refactored version of the pScan with Java on the Neo4j.
+This is the Java-Neo4j version of the pScan.
 
 ## Content
 - [Deployment](#deployment)
@@ -94,5 +92,4 @@ We implement three optimizations in the pSCAN.
 
 
 # Reference
-- [pSCAN](https://github.com/LijunChang/pSCAN) - pSCAN: Fast and Exact Structural Graph Clustering.
-
+The paper: *["pSCAN: Fast and Exact Structural Graph Clustering"](https://www.cse.unsw.edu.au/~ljchang/pdf/icde16-pscan.pdf) by Lijun Chang, Wei Li, Xuemin Lin,Lu Qin and Wenjie Zhang, ICDE'16*.
