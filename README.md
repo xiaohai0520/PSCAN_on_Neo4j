@@ -44,15 +44,15 @@ $java RUN_PSCAN ./data/data.txt ./model 0.51 4
 The undirected unweighted input network to be clustered is specified in the TXT format files:
 
 
-	```
-	# Example Network
-	# Nodes number  
-    9
-	# Note that the links in the database
-	0 1
-	0 2
-	2 1
-	```
+```
+# Example Network
+# Nodes number  
+9
+# Note that the links in the database
+0 1
+0 2
+2 1
+```
 ## Output
 The CNL (clusters nodes list) output is a standard format. For example:
 ```
